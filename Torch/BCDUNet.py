@@ -1,14 +1,15 @@
+import numpy as np
 import torch 
 import torch.nn as nn
 from BCDUNet import ConvBLSTM
 
 class BCDUNet(nn.Module):
-    def __init__(self, input_dim=3, output_dim=3, num_filter=64, norm='instance'):
+    def __init__(self, input_dim=3, output_dim=3, num_filter=64, frame_size=(256, 256), bidirectional=False, norm='instance'):
         super(BCDUNet, self).__init__()
         self.num_filter = num_filter
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2).cuda()
         self.dropout = nn.Dropout(0.5).cuda()
-
+        self.frame_size = np.array(frame_size)
         self.conv1_0 = nn.Conv2d(input_dim, num_filter, kernel_size=3, stride=1, padding=1).cuda()
         self.conv1_1 = nn.Conv2d(num_filter, num_filter, kernel_size=3, stride=1, padding=1).cuda()
         self.conv2_0 = nn.Conv2d(num_filter, num_filter*2, kernel_size=3, stride=1, padding=1).cuda()
@@ -41,14 +42,18 @@ class BCDUNet(nn.Module):
         self.convt3 = nn.ConvTranspose2d(num_filter*2, num_filter, kernel_size=2, stride=2, padding=0).cuda()
         self.bn3 = nn.BatchNorm2d(num_filter).cuda()
 
-
-        self.clstm1 = ConvBLSTM(in_channels=num_filter*4, hidden_channels=num_filter, kernel_size=(3, 3), num_layers=1).cuda()
-        self.clstm2 = ConvBLSTM(in_channels=num_filter*2, hidden_channels=num_filter//2, kernel_size=(3, 3), num_layers=1).cuda()
-        self.clstm3 = ConvBLSTM(in_channels=num_filter, hidden_channels=num_filter//4, kernel_size=(3, 3), num_layers=1).cuda()
+        if bidirectional:
+            self.clstm1 = ConvBLSTM(num_filter*4, num_filter*2, (3, 3), (1,1), 'tanh', list(self.frame_size//4)).cuda()
+            self.clstm2 = ConvBLSTM(num_filter*2, num_filter, (3, 3), (1,1), 'tanh', list(self.frame_size//2)).cuda()
+            self.clstm3 = ConvBLSTM(num_filter, num_filter//2, (3, 3), (1,1), 'tanh', list(self.frame_size)).cuda()
+        else:
+            self.clstm1 = ConvLSTM(num_filter*4, num_filter*2, (3, 3), (1,1), 'tanh', list(self.frame_size//4)).cuda()
+            self.clstm2 = ConvLSTM(num_filter*2, num_filter, (3, 3), (1,1), 'tanh', list(self.frame_size//2)).cuda()
+            self.clstm3 = ConvLSTM(num_filter, num_filter//2, (3, 3), (1,1), 'tanh', list(self.frame_size)).cuda()
         
         
     def forward(self, x):
-        N = x.size()[-2]
+        N = self.frame_size
         conv1 = self.conv1_0(x)
         conv1 = self.conv1_1(conv1)
         pool1 = self.maxpool(conv1)
@@ -77,8 +82,8 @@ class BCDUNet(nn.Module):
         up6 = self.bn1(up6)
         up6 = nn.ReLU()(up6)
 
-        x1 = drop3.view(-1,1,self.num_filter*4,N//4,N//4)
-        x2 = up6.view(-1,1,self.num_filter*4,N//4,N//4)
+        x1 = drop3.view(-1,1,self.num_filter*4,*(N//4))
+        x2 = up6.view(-1,1,self.num_filter*4,*(N//4))
 
         merge6 = torch.cat((x1, x2), 1)
         merge6 = self.clstm1(merge6)
@@ -90,8 +95,8 @@ class BCDUNet(nn.Module):
         up7 = self.bn2(up7)
         up7 = nn.ReLU()(up7)
 
-        x1 = conv2.view(-1,1,self.num_filter*2,N//2,N//2)
-        x2 = up7.view(-1,1,self.num_filter*2,N//2,N//2)
+        x1 = conv2.view(-1,1,self.num_filter*2,*(N//2))
+        x2 = up7.view(-1,1,self.num_filter*2,*(N//2))
         merge7 = torch.cat((x1, x2), 1)
         merge7 = self.clstm2(merge7)
 
@@ -102,8 +107,8 @@ class BCDUNet(nn.Module):
         up8 = self.bn3(up8)
         up8 = nn.ReLU()(up8)
 
-        x1 = conv1.view(-1,1,self.num_filter,N,N)
-        x2 = up8.view(-1,1,self.num_filter,N,N)
+        x1 = conv1.view(-1,1,self.num_filter,*N)
+        x2 = up8.view(-1,1,self.num_filter,*N)
         merge8 = torch.cat((x1, x2), 1)
         merge8 = self.clstm3(merge8)
 
@@ -114,6 +119,7 @@ class BCDUNet(nn.Module):
         conv9 = self.conv9_0(conv8)
 
         return conv9
+
 
 
 if __name__ == '__main__':
