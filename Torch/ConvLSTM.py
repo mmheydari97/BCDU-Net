@@ -47,12 +47,12 @@ class ConvLSTMCell(nn.Module):
 
 
 class ConvLSTM(nn.Module):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     def __init__(self, in_channels, out_channels, 
     kernel_size, padding, activation, frame_size, return_sequence=False):
 
         super(ConvLSTM, self).__init__()
-
+        
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.out_channels = out_channels
         self.return_sequence = return_sequence
 
@@ -69,15 +69,15 @@ class ConvLSTM(nn.Module):
 
         # Initialize output
         output = torch.zeros(batch_size, seq_len, self.out_channels,  
-        height, width, device=device)
+        height, width, device=self.device)
         
         # Initialize Hidden State
         H = torch.zeros(batch_size, self.out_channels, 
-        height, width, device=device)
+        height, width, device=self.device)
 
         # Initialize Cell Input
         C = torch.zeros(batch_size,self.out_channels, 
-        height, width, device=device)
+        height, width, device=self.device)
 
         # Unroll over time steps
         for time_step in range(seq_len):
@@ -89,7 +89,6 @@ class ConvLSTM(nn.Module):
             output = torch.squeeze(output[:, -1,...], dim=1)
 
         return output
-
 
 
 class ConvBLSTM(nn.Module):

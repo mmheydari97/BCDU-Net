@@ -1,7 +1,8 @@
 import numpy as np
 import torch 
 import torch.nn as nn
-from BCDUNet import ConvBLSTM
+from BCDUNet import ConvBLSTM, ConvLSTM
+
 
 class BCDUNet(nn.Module):
     def __init__(self, input_dim=3, output_dim=3, num_filter=64, frame_size=(256, 256), bidirectional=False, norm='instance'):
