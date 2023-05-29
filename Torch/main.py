@@ -10,7 +10,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Hyperparameters
 input_dim = 3
-output_dim = 3
+output_dim = 1
 num_filter = 64
 frame_size = (256, 256)
 bidirectional = False
