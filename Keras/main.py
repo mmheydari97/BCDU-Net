@@ -2,20 +2,17 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from sklearn.model_selection import train_test_split
-from tensorflow_examples.models.pix2pix import pix2pix
 import os
+import glob
 
 # Your BCDUNet function here
 
-# Download the Oxford-IIIT Pet dataset
-dataset_url = "https://www.robots.ox.ac.uk/~vgg/data/pets/data/images.tar.gz"
-annotations_url = "https://www.robots.ox.ac.uk/~vgg/data/pets/data/annotations.tar.gz"
+# Download a subset of the ADE20K dataset
+dataset_url = "https://groups.csail.mit.edu/vision/datasets/ADE20K/ADE20K_2016_07_26.zip"
+img_path = tf.keras.utils.get_file("ADE20K_2016_07_26.zip", dataset_url, extract=True)
 
-img_path = tf.keras.utils.get_file("images.tar.gz", dataset_url, untar=True)
-ann_path = tf.keras.utils.get_file("annotations.tar.gz", annotations_url, untar=True)
-
-img_dir = os.path.join(os.path.dirname(img_path), "images")
-ann_dir = os.path.join(os.path.dirname(ann_path), "annotations/trimaps")
+img_dir = os.path.join(os.path.dirname(img_path), "ADE20K_2016_07_26/images/training/A")
+ann_dir = os.path.join(os.path.dirname(img_path), "ADE20K_2016_07_26/annotations/training/A")
 
 # Load and preprocess the dataset
 def load_image_and_annotation(image_path, annotation_path, input_size=(256, 256)):
@@ -29,8 +26,8 @@ def load_image_and_annotation(image_path, annotation_path, input_size=(256, 256)
 
     return image, annotation
 
-image_paths = sorted([os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.endswith(".jpg")])
-annotation_paths = sorted([os.path.join(ann_dir, f) for f in os.listdir(ann_dir) if f.endswith(".png")])
+image_paths = sorted(glob.glob(os.path.join(img_dir, "*.jpg")))
+annotation_paths = sorted(glob.glob(os.path.join(ann_dir, "*.png")))
 
 images = []
 annotations = []
