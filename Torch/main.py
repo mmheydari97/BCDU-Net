@@ -4,6 +4,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from BCDUNet import BCDUNet
+import matplotlib.pyplot as plt
+
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -35,6 +37,26 @@ model = BCDUNet(input_dim, output_dim, num_filter, frame_size, bidirectional, no
 criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
+def visualize_samples(inputs, generated_outputs, ground_truth, n_samples, filename):
+    num_samples = n_samples
+    fig, axes = plt.subplots(num_samples, 3, figsize=(10, 10))
+    fig.tight_layout()
+
+    for i in range(num_samples):
+        axes[i, 0].imshow(inputs[i].permute(1, 2, 0))
+        axes[i, 0].set_title('Input')
+        axes[i, 0].axis('off')
+
+        axes[i, 1].imshow(generated_outputs[i].squeeze(), cmap='gray')
+        axes[i, 1].set_title('Generated Output')
+        axes[i, 1].axis('off')
+
+        axes[i, 2].imshow(ground_truth[i].permute(1, 2, 0))
+        axes[i, 2].set_title('Ground Truth')
+        axes[i, 2].axis('off')
+
+    plt.savefig(filename)
+
 # Training loop
 for epoch in range(epochs):
     for batch_idx, (data, targets) in enumerate(train_loader):
@@ -56,5 +78,7 @@ for epoch in range(epochs):
         # Print progress
         if batch_idx % 10 == 0:
             print(f"Epoch [{epoch+1}/{epochs}], Step [{batch_idx}/{len(train_loader)}], Loss: {loss.item()}")
+            visualize_samples(data.cpu(), torch.sigmoid(scores).cpu(), targets.cpu(), 10, f'fig_{epoch}.jpg')
+
 
 print("Training completed.")
