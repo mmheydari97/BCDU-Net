@@ -25,7 +25,7 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-train_data = datasets.Cityscapes('./data', split='train', mode='fine', target_type='semantic', transform=transform, target_transform=transform)
+train_data = datasets.VOCSegmentation('./data', year='2012', image_set='train', transform=transform, target_transform=transform)
 train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
 # Initialize the model
