@@ -1,32 +1,37 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 import os
 import glob
 from BCDUNet import BCDUNet
 
 # Download a subset of the ADE20K dataset
-dataset_url = "https://groups.csail.mit.edu/vision/datasets/ADE20K/ADE20K_2016_07_26.zip"
-img_path = tf.keras.utils.get_file("ADE20K_2016_07_26.zip", dataset_url, extract=True)
+img_path = "./data/train"
 
-img_dir = os.path.join(os.path.dirname(img_path), "ADE20K_2016_07_26/images/training/A")
-ann_dir = os.path.join(os.path.dirname(img_path), "ADE20K_2016_07_26/annotations/training/A")
+img_dir = os.path.join(os.path.dirname(img_path), "train/source")
+ann_dir = os.path.join(os.path.dirname(img_path), "train/tactile")
 
 # Load and preprocess the dataset
 def load_image_and_annotation(image_path, annotation_path, input_size=(256, 256)):
     image = load_img(image_path, target_size=input_size)
     image = img_to_array(image) / 255.0
-
-    annotation = load_img(annotation_path, target_size=input_size, color_mode="grayscale")
+    
+    annotation = load_img(annotation_path, target_size=input_size)
     annotation = img_to_array(annotation)
-    annotation = np.where(annotation == 255, 0, annotation) - 1
-    annotation = to_categorical(annotation, num_classes=3)
+    annotation = img_to_array(annotation) / 255.0
+    
+    
+    # annotation = load_img(annotation_path, target_size=input_size, color_mode="grayscale")
+    # annotation = img_to_array(annotation)
+    # annotation = np.where(annotation == 255, 0, annotation) - 1
+    # annotation = to_categorical(annotation, num_classes=3)
 
     return image, annotation
 
-image_paths = sorted(glob.glob(os.path.join(img_dir, "*.jpg")))
-annotation_paths = sorted(glob.glob(os.path.join(ann_dir, "*.png")))
+image_paths = sorted(glob.glob(os.path.join(img_dir, "*.png")))
+annotation_paths = sorted(glob.glob(os.path.join(ann_dir, "*.tiff")))
 
 images = []
 annotations = []
@@ -46,16 +51,22 @@ x_train, x_val, y_train, y_val = train_test_split(images, annotations, train_siz
 model = BCDUNet(input_size=(256, 256, 3), output_c=3)
 
 # Train the model
-model.fit(x_train, y_train, batch_size=32, epochs=10, validation_data=(x_val, y_val))
+model.fit(x_train, y_train, batch_size=4, epochs=10, validation_data=(x_val, y_val), verbose=2)
 
 # Evaluate the model using Intersection over Union (IoU) metric
 def calculate_iou(y_true, y_pred):
-    y_true = np.argmax(y_true, axis=-1)
-    y_pred = np.argmax(y_pred, axis=-1)
+    o = np.array(y_pred)
+    r = np.array(y_true)
+    intersection = np.sum(o * r)
+    union = np.sum(o**2 + r**2 - o*r)
+    iou_score = intersection / union 
+    
+    # y_true = np.argmax(y_true, axis=-1)
+    # y_pred = np.argmax(y_pred, axis=-1)
 
-    intersection = np.logical_and(y_true, y_pred)
-    union = np.logical_or(y_true, y_pred)
-    iou_score = np.sum(intersection) / np.sum(union)
+    # intersection = np.logical_and(y_true, y_pred)
+    # union = np.logical_or(y_true, y_pred)
+    # iou_score = np.sum(intersection) / np.sum(union)
 
     return iou_score
 
