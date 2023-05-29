@@ -32,7 +32,7 @@ train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 model = BCDUNet(input_dim, output_dim, num_filter, frame_size, bidirectional, norm).to(device)
 
 # Loss and optimizer
-criterion = nn.CrossEntropyLoss()
+criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
 # Training loop
