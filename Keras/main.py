@@ -4,8 +4,7 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from sklearn.model_selection import train_test_split
 import os
 import glob
-
-# Your BCDUNet function here
+from BCDUNet import BCDUNet
 
 # Download a subset of the ADE20K dataset
 dataset_url = "https://groups.csail.mit.edu/vision/datasets/ADE20K/ADE20K_2016_07_26.zip"
@@ -41,7 +40,7 @@ images = np.array(images)
 annotations = np.array(annotations)
 
 # Split the dataset into training and validation sets
-x_train, x_val, y_train, y_val = train_test_split(images, annotations, test_size=0.2, random_state=42)
+x_train, x_val, y_train, y_val = train_test_split(images, annotations, train_size=0.8, test_size=0.2, random_state=42)
 
 # Create the BCDUNet model
 model = BCDUNet(input_size=(256, 256, 3), output_c=3)
