@@ -5,7 +5,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam, SGD
 
 
-def BCDUNet(input_size = (256,256,3), output_c=3):
+def BCDUNet(input_size = (256,256,3), output_c=3, bidirectional=True):
     N = input_size[0]
     inputs = Input(input_size)
     # comments show corresponding layers in pytorch implementation.
@@ -43,7 +43,11 @@ def BCDUNet(input_size = (256,256,3), output_c=3):
     x2 = Reshape(target_shape=(1, np.int32(N/4), np.int32(N/4), 256))(up6)
     merge6  = concatenate([x1,x2], axis = 1)
     
-    merge6 = Bidirectional(ConvLSTM2D(filters = 64, kernel_size=(3, 3), padding='same', return_sequences = False, kernel_initializer = 'he_normal'), merge_mode="concat")(merge6) #clstm1
+    if bidirectional:
+        merge6 = Bidirectional(ConvLSTM2D(filters = 64, kernel_size=(3, 3), padding='same', return_sequences = False, kernel_initializer = 'he_normal'), merge_mode="concat")(merge6) #clstm1
+    else:
+        merge6 = ConvLSTM2D(filters = 128, kernel_size=(3, 3), padding='same', return_sequences = False, kernel_initializer = 'he_normal')(merge6)
+
     conv6 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge6) #conv6_0
     conv6 = Conv2D(256, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv6) #conv6_1
 
@@ -54,7 +58,11 @@ def BCDUNet(input_size = (256,256,3), output_c=3):
     x1 = Reshape(target_shape=(1, np.int32(N/2), np.int32(N/2), 128))(conv2)
     x2 = Reshape(target_shape=(1, np.int32(N/2), np.int32(N/2), 128))(up7)
     merge7  = concatenate([x1,x2], axis = 1)
-    merge7 = Bidirectional(ConvLSTM2D(filters = 32, kernel_size=(3, 3), padding='same', return_sequences = False, kernel_initializer = 'he_normal'), merge_mode="concat")(merge7) #clstm2
+
+    if bidirectional:
+        merge7 = Bidirectional(ConvLSTM2D(filters = 32, kernel_size=(3, 3), padding='same', return_sequences = False, kernel_initializer = 'he_normal'), merge_mode="concat")(merge7) #clstm2
+    else:
+        merge7 = ConvLSTM2D(filters = 64, kernel_size=(3, 3), padding='same', return_sequences = False, kernel_initializer = 'he_normal')(merge7)
 
     conv7 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge7) #conv7_0
     conv7 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv7) #conv7_1
@@ -66,8 +74,11 @@ def BCDUNet(input_size = (256,256,3), output_c=3):
     x1 = Reshape(target_shape=(1, N, N, 64))(conv1)
     x2 = Reshape(target_shape=(1, N, N, 64))(up8)
     merge8  = concatenate([x1,x2], axis = 1)
-    merge8 = Bidirectional(ConvLSTM2D(filters = 16, kernel_size=(3, 3), padding='same', return_sequences = False,kernel_initializer = 'he_normal' ), merge_mode="concat")(merge8) #clstm3
 
+    if bidirectional:
+        merge8 = Bidirectional(ConvLSTM2D(filters = 16, kernel_size=(3, 3), padding='same', return_sequences = False,kernel_initializer = 'he_normal' ), merge_mode="concat")(merge8) #clstm3
+    else:
+        merge8 = ConvLSTM2D(filters = 32, kernel_size=(3, 3), padding='same', return_sequences = False,kernel_initializer = 'he_normal' )(merge8) #clstm3
     conv8 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge8) #conv8_0
     conv8 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8) #conv8_1
     conv8 = Conv2D(32, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv8) #conv8_2
